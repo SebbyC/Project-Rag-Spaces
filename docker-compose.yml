@@ -1,0 +1,134 @@
+version: "3.9"
+
+services:
+  # Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.9.1
+    container_name: rag-qdrant
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: rag-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yoursecurepassword}
+      POSTGRES_DB: ragworkspace
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: rag-redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # .NET Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: rag-backend
+    environment:
+      # All environment variables from .env
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY}
+      - AZURE_OPENAI_MODEL=${AZURE_OPENAI_MODEL:-gpt-4o}
+      - AZURE_OPENAI_EMBEDDING_MODEL=${AZURE_OPENAI_EMBEDDING_MODEL:-text-embedding-3-large}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/gcp-credentials.json
+      - VERTEX_PROJECT_ID=${VERTEX_PROJECT_ID}
+      - VERTEX_LOCATION=${VERTEX_LOCATION:-us-central1}
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - AZURE_FILE_SHARE_NAME=${AZURE_FILE_SHARE_NAME:-projectraguploads}
+      - MOUNT_PATH=${MOUNT_PATH:-/mnt/projectrag/uploads}
+      - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-250}
+      - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
+      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-project_rag_collection}
+      - DATABASE_CONNECTION_STRING=${DATABASE_CONNECTION_STRING:-Host=postgres;Database=ragworkspace;Username=postgres;Password=yoursecurepassword}
+      - REDIS_CONNECTION_STRING=${REDIS_CONNECTION_STRING:-redis:6379}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ISSUER=${JWT_ISSUER:-project-rag.com}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-project-rag.com/api}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
+      - DEFAULT_LLM_PROVIDER=${DEFAULT_LLM_PROVIDER:-azure-openai}
+      - DEFAULT_CHAT_MODEL=${DEFAULT_CHAT_MODEL:-gpt-4o}
+    volumes:
+      - azurefiles:${MOUNT_PATH:-/mnt/projectrag/uploads}
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./credentials/gcp-credentials.json}:/app/credentials/gcp-credentials.json:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - rag-network
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: rag-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - rag-network
+
+volumes:
+  qdrant_data:
+  postgres_data:
+  redis_data:
+  azurefiles:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "mfsymlinks,vers=3.0,username=${STORAGE_ACCOUNT},password=${STORAGE_KEY},addr=${STORAGE_ACCOUNT}.file.core.windows.net,uid=1000,gid=1000,file_mode=0777,dir_mode=0777"
+      device: "//${STORAGE_ACCOUNT}.file.core.windows.net/${AZURE_FILE_SHARE_NAME}"
+
+networks:
+  rag-network:
+    driver: bridge

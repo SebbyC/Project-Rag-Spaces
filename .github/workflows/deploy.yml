@@ -1,0 +1,77 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: rag-workspace
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Build Backend
+      run: |
+        cd backend
+        dotnet restore
+        dotnet build --configuration Release --no-restore
+        dotnet publish -c Release -o ./publish
+
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+
+    - name: Login to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+
+    - name: Build and push Backend Docker image
+      run: |
+        docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/rag-backend:${{ github.sha }} -f backend/Dockerfile .
+        docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/rag-backend:${{ github.sha }}
+
+    - name: Build and push Frontend Docker image
+      run: |
+        docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/rag-frontend:${{ github.sha }} -f frontend/Dockerfile .
+        docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/rag-frontend:${{ github.sha }}
+
+    - name: Deploy Backend to Azure Container Apps
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        appSourcePath: ${{ github.workspace }}
+        acrName: ${{ secrets.REGISTRY_SERVER_NAME }}
+        containerAppName: rag-backend
+        resourceGroup: ${{ secrets.RESOURCE_GROUP }}
+        imageToDeploy: ${{ secrets.REGISTRY_LOGIN_SERVER }}/rag-backend:${{ github.sha }}
+
+    - name: Deploy Frontend to Azure Container Apps
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        appSourcePath: ${{ github.workspace }}
+        acrName: ${{ secrets.REGISTRY_SERVER_NAME }}
+        containerAppName: rag-frontend
+        resourceGroup: ${{ secrets.RESOURCE_GROUP }}
+        imageToDeploy: ${{ secrets.REGISTRY_LOGIN_SERVER }}/rag-frontend:${{ github.sha }}
