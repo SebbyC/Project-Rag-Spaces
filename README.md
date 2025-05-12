@@ -1,6 +1,6 @@
 # RAG Workspace
 
-A production-ready RAG (Retrieval-Augmented Generation) platform that enables developers to interact with their codebases using AI. The system supports multiple LLMs (Azure OpenAI, OpenAI, Google Gemini), integrates with Azure File Share for persistent storage, and provides a seamless experience across local development and cloud deployments.
+A RAG (Retrieval-Augmented Generation) platform that enables developers to interact with their codebases using AI. The system supports multiple LLMs (Azure OpenAI, OpenAI, Google Gemini), integrates with Azure File Share for persistent storage, and provides a seamless experience across local development and cloud deployments.
 
 ## Features
 
