@@ -1,4 +1,3 @@
-Okay, this is a fantastic point to dive into the "how." You want a detailed pseudo-code breakdown for the backend, focusing on how text embedding works with a single model strategy. This will make the .NET implementation much clearer.
 
 **Core Strategy: Single Embedding Model**
 
