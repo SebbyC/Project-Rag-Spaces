@@ -1,39 +1,4 @@
-You said:
-Project rag workspace like chatgpt but azure.NET in containers for request to project files hosted in vector db + regular txt for prompt overload/ querying using agent sdk or mcp main goal is flexable cowork space with registration and I want Next JS frontend website all one GitHub repo with scripts to launch both container and npm run dev to call container using env local host api key variables add in multi LLM capabilities 
-ChatGPT said:
 
-Thought for 15 seconds
-Rag Workspace Repo Structure
-I've drafted a full-stack blueprint—directory tree, Docker-compose, backend/.NET container, Next.js front-end scaffolding, env samples, and multi-LLM swap logic—all in a single repo layout so you can clone, run ./scripts/dev.sh, and start iterating. Let me know which parts you'd like to flesh out next (e.g., specific agent orchestration code, auth wiring, or CI/CD).
-
-You said:
-Extend this project idea and overall North Star endgoal requirements readme components Gemini 2.5 pro switchable LLM using rag + context overload 
-ChatGPT said:
-To extend this project idea and define the overall North Star vision in a README, could you clarify a few details?
-
-What specific use cases or workflows do you envision this cowork space supporting (e.g., legal review, code generation, research summarization)?
-
-Do you plan to support real-time collaboration (e.g., multiple users editing or chatting in the same thread)?
-
-Should Gemini 2.5 Pro be accessed via API (Google Vertex AI) or a local proxy?
-
-Do you want user-specific context and memory or global for the session?
-
-Are there any specific compliance/security goals (e.g., Azure AD, GDPR, SOC2)?
-
-This will help ensure the README goals and architecture reflect the long-term vision accurately.
-
-You said:
-Code generation mainly via API I want github integration like Claude projects have 
-ChatGPT said:
-Great. I’ll put together a plan to extend your RAG cowork project with Gemini 2.5 Pro integration (via API), a switchable multi-LLM architecture, and GitHub-connected code generation features similar to what Claude projects offer.
-
-I’ll focus on detailing the end-goal README components, architectural extensions, and how to enable GitHub-aware agent flows with context-overloaded RAG pipelines.
-
-I’ll get back to you shortly with the findings.
-
-Research completed in 2m · 3 sources · 33 searches
-Extended RAG Workspace with Gemini 2.5 Pro and GitHub Integration
 
 RAG Co-Work Space – Extended Architecture and Features
 North Star Vision 🌟
